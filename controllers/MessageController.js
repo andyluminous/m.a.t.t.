@@ -9,10 +9,14 @@ subscriber.on('pmessage', function(pattern,channel, msg) {
         echoMessage(getCurrentTime());
     }
 });
+
+// subscribe to redis 'expired' event
 subscriber.psubscribe( "__keyevent@0__:expired", function (err) {
     client.do('del', 'nextMsgTime');
     echoMessage(getCurrentTime());
 });
+
+// promisify redis driver
 
 client.do = function(job) {
     return new Promise((resolve, reject) => {
@@ -27,8 +31,7 @@ client.do = function(job) {
 
 }
 
-// nextMsgTime
-// timer
+// get new messages and add them to Sorted Set in redis, score = scheduled time
 
 function MessageController() {
   this.echoAtTime = async function (req, res, next) {
@@ -55,7 +58,7 @@ function MessageController() {
     }
   }
 }
-
+// when nextMsgTime expires, get all scheduled messages from sorted set 'messages' and log them, set new nextMsgTime if possible
 
 async function echoMessage(time) {
     try {
